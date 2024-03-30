@@ -186,27 +186,26 @@ class WebSocketClient
                     {
                         string whatToSend = receivedMessage.Substring("UDPT:".Length);
                         int index= whatToSend.IndexOf(":");
-                        string type = whatToSend.Substring(0, index);
-                        string data = whatToSend.Substring(index + 1);
-                        if (int.TryParse(type, out int port))
-                        {
-                            //Send UDP data as text to localhost:port
-                            Console.WriteLine($"Sending UDP data to localhost:{port}");
-                            UdpClient udpClient = new UdpClient();
-                            await udpClient.SendAsync(Encoding.UTF8.GetBytes(data), data.Length, "localhost", port);
-                            udpClient.Close();
-                        }
-                        else {
-                            foreach (var item in m_broadcastPort)
+                        if (index > -1) { 
+                            string type = whatToSend.Substring(0, index);
+                            string data = whatToSend.Substring(index + 1);
+                            if (int.TryParse(type, out int port))
                             {
+                                //Send UDP data as text to localhost:port
+                                Console.WriteLine($"Sending UDP data to localhost:{port}");
                                 UdpClient udpClient = new UdpClient();
-                                await udpClient.SendAsync(Encoding.UTF8.GetBytes(data), data.Length, "localhost", item);
+                                await udpClient.SendAsync(Encoding.UTF8.GetBytes(data), data.Length, "localhost", port);
                                 udpClient.Close();
                             }
+                            else {
+                                foreach (var item in m_broadcastPort)
+                                {
+                                    UdpClient udpClient = new UdpClient();
+                                    await udpClient.SendAsync(Encoding.UTF8.GetBytes(data), data.Length, "localhost", item);
+                                    udpClient.Close();
+                                }
+                            }
                         }
-
-                        string time = receivedMessage.Replace("CLIENTTIME:", "");
-                        Console.WriteLine($"Server time: {time}");
                     }
 
                 }
