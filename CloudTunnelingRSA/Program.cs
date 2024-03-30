@@ -24,7 +24,10 @@ public class QuickTest
     public static string m_publicKey = "<RSAKeyValue><Modulus>vP7yDAkjkLrO7zqlaOlVpi3h7knD2xU4voEj3w9aJ9Pm/J0WADOOpnGcBc25VI7yuZuJZjsLuK9dz6aFVQR2+ZpT7H1aD/7qgXG10eIrOSu41ZIpcO26VDFcfsX1as7kmAQmLqFFTzcL2Yzv5Vz3982QeFy5Sx4MIRa26fbrKOE=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
     public static string m_tunnelToSigneMessage= Guid.NewGuid().ToString();
+
     public static bool m_isRsaValidated = false;
+    internal static bool m_saidHello;
+    internal static bool m_waitForSigneMessage;
 }
 
 public class HideWindow {
@@ -113,6 +116,8 @@ class WebSocketServer
         WebSocket webSocket = webSocketContext.WebSocket;
         string clientId = Guid.NewGuid().ToString(); // Assign a unique identifier to each client
 
+        Console.WriteLine($"Hello  message from {clientId}");
+
         connectedClients.TryAdd(clientId, webSocket);
 
         try
@@ -125,37 +130,81 @@ class WebSocketServer
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-
                     string receivedMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    if(AppConfig.Configuration.m_useConsolePrint)
-                    Console.WriteLine($"Received message from {clientId}: {receivedMessage}");
+                    if (AppConfig.Configuration.m_useConsolePrint)
+                        Console.WriteLine($"Received message from {clientId}: {receivedMessage}");
 
-                    if (receivedMessage.StartsWith("RSA:")){
+                    if (receivedMessage.Length == 5 && receivedMessage.IndexOf("Hello") == 0)
+                    {
+                        QuickTest.m_saidHello = false;
+                        QuickTest.m_waitForSigneMessage = false;
+                        QuickTest.m_isRsaValidated = false;
+                    }
 
-                        RSA rsa = RSA.Create();
+                    if (!QuickTest.m_isRsaValidated)
+                    {
 
-                        rsa.KeySize = 1024;
-                        rsa.FromXmlString(QuickTest.m_publicKey);
-                        RSAParameters publicKey = rsa.ExportParameters(false);
+                        if (receivedMessage.Length == 5 && receivedMessage.IndexOf("Hello") == 0)
+                        {
+                            QuickTest.m_saidHello = true;
+                            QuickTest.m_waitForSigneMessage = true;
+                            QuickTest.m_isRsaValidated = false;
+                            byte[] reply = Encoding.UTF8.GetBytes("SIGNEHERE:" + QuickTest.m_tunnelToSigneMessage);
+                            await webSocket.SendAsync(new ArraySegment<byte>(reply), WebSocketMessageType.Text, true, CancellationToken.None);
+                        }
+                        else if (QuickTest.m_saidHello && QuickTest.m_waitForSigneMessage)
+                        {
 
-                        string encryptMessage= receivedMessage.Substring("RSA:".Length);
-                        Console.WriteLine("RSA Key received");
-                        string messageNeedToBe = DateTime.UtcNow.ToString("yyyyMMddHHmm");
-                        Console.WriteLine("Message to verify: " + messageNeedToBe);
+                            RSA rsa = RSA.Create();
+
+                            rsa.KeySize = 1024;
+                            rsa.FromXmlString(QuickTest.m_publicKey);
+                            RSAParameters publicKey = rsa.ExportParameters(false);
+
+                            string encryptMessage = receivedMessage.Substring("RSA:".Length);
+                            Console.WriteLine("Message to verified:" + encryptMessage);
+                            byte[] encryptedData = Convert.FromBase64String(encryptMessage);
+                            bool isVerified = VerifySignature(Encoding.UTF8.GetBytes(QuickTest.m_tunnelToSigneMessage), encryptedData, publicKey);
+                            // console write is verified
+                            Console.WriteLine("Is verified: " + isVerified);
+                            Console.WriteLine("");
+                            Console.WriteLine("");
+
+                            if (isVerified)
+                            {
+                                QuickTest.m_waitForSigneMessage = false;
+                                QuickTest.m_isRsaValidated = true;
+                                byte[] reply = Encoding.UTF8.GetBytes("RSA:Verified");
+                                await webSocket.SendAsync(new ArraySegment<byte>(reply), WebSocketMessageType.Text, true, CancellationToken.None);
+                                reply = Encoding.UTF8.GetBytes("Congratulation. Welcome to the server. Make yourself as at your home. :)\n\n\n");
+                                await webSocket.SendAsync(new ArraySegment<byte>(reply), WebSocketMessageType.Text, true, CancellationToken.None);
+                            }
+                            else
+                            {
 
 
-                        Console.WriteLine("Message to decrypt:" + encryptMessage);
-                        byte[] encryptedData = Convert.FromBase64String(encryptMessage);
+                                byte[] reply = Encoding.UTF8.GetBytes("Signature non validie !!!");
+                                await webSocket.SendAsync(new ArraySegment<byte>(reply), WebSocketMessageType.Text, true, CancellationToken.None);
 
-                        bool isVerified= VerifySignature(Encoding.UTF8.GetBytes(messageNeedToBe), encryptedData, publicKey);
-                        // console write is verified
-                        Console.WriteLine("Is verified: " + isVerified);
-                        Console.WriteLine("");
-                        Console.WriteLine("");
+                                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                                webSocket.Dispose();
+                            }
+                        }
+                        else {
+                            byte[] reply = Encoding.UTF8.GetBytes("You must say 'Hello'." +
+                                " You will receive a 'SIGNEHERE:' message." +
+                                " Signe it with your RSA key. Wait the 'RSA:Verified'." +
+                                " Any other situation is consider as spam, fail or DOS and lead to disconnection.");
+                            await webSocket.SendAsync(new ArraySegment<byte>(reply), WebSocketMessageType.Text, true, CancellationToken.None);
 
-                        //Reply that user is verified
-                        byte[] reply = Encoding.UTF8.GetBytes("RSA:Verified");
-                        await webSocket.SendAsync(new ArraySegment<byte>(reply), WebSocketMessageType.Text, true, CancellationToken.None);
+                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                            webSocket.Dispose();
+                        }
+
+                    }
+                    else {
+
+                        Console.WriteLine("Valide message: " + receivedMessage);
                     }
 
                     // You can handle the received message here if needed
