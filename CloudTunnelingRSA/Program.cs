@@ -19,17 +19,18 @@ using System.Security.Cryptography.X509Certificates;
 
 public class QuickTest
 {
-  
+
     public static string m_publicKey = "<RSAKeyValue><Modulus>vP7yDAkjkLrO7zqlaOlVpi3h7knD2xU4voEj3w9aJ9Pm/J0WADOOpnGcBc25VI7yuZuJZjsLuK9dz6aFVQR2+ZpT7H1aD/7qgXG10eIrOSu41ZIpcO26VDFcfsX1as7kmAQmLqFFTzcL2Yzv5Vz3982QeFy5Sx4MIRa26fbrKOE=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
-    public static string m_tunnelToSigneMessage= Guid.NewGuid().ToString();
+    public static string m_tunnelToSigneMessage = Guid.NewGuid().ToString();
 
     public static bool m_isRsaValidated = false;
     internal static bool m_saidHello;
     internal static bool m_waitForSigneMessage;
 }
 
-public class HideWindow {
+public class HideWindow
+{
 
     // Import the ShowWindow function from user32.dll
     [DllImport("user32.dll")]
@@ -52,7 +53,7 @@ class WebSocketServer
         public int m_portOfServer = 2501;
         public int m_portToListen = 2502;
         public bool m_useRebroadcastLastMessage = false;
-        public bool m_displayIpAddresses=true;
+        public bool m_displayIpAddresses = true;
         public bool m_useConsolePrint = false;
         public bool m_valueTypeIsByte = true;
 
@@ -97,7 +98,7 @@ class WebSocketServer
             }
         }
     }
-    
+
 
 
     static bool VerifySignature(byte[] data, byte[] signature, RSAParameters publicKey)
@@ -189,7 +190,8 @@ class WebSocketServer
                                 webSocket.Dispose();
                             }
                         }
-                        else {
+                        else
+                        {
                             byte[] reply = Encoding.UTF8.GetBytes("You must say 'Hello'." +
                                 " You will receive a 'SIGNEHERE:' message." +
                                 " Signe it with your RSA key. Wait the 'RSA:Verified'." +
@@ -201,7 +203,8 @@ class WebSocketServer
                         }
 
                     }
-                    else {
+                    else
+                    {
 
                         Console.WriteLine("Valide message: " + receivedMessage);
                     }
@@ -230,7 +233,7 @@ class WebSocketServer
 
             if (AppConfig.Configuration.m_valueTypeIsByte)
             {
-                byte[] byteToBroadcast= result.Buffer;
+                byte[] byteToBroadcast = result.Buffer;
                 TimeWatch.Start();
 
                 if (AppConfig.Configuration.m_useConsolePrint)
@@ -244,7 +247,7 @@ class WebSocketServer
                     {
                         if (client.Value.State == WebSocketState.Open)
                         {
-                            
+
                             await client.Value.SendAsync(new ArraySegment<byte>(byteToBroadcast), WebSocketMessageType.Binary, true, CancellationToken.None);
                         }
                         else
@@ -263,7 +266,8 @@ class WebSocketServer
 
                     Console.WriteLine($"TimeWatch (Read and push): {TimeWatch.GetSeconds()}");
             }
-            else {
+            else
+            {
                 string udpMessage = Encoding.UTF8.GetString(result.Buffer);
                 TimeWatch.Start();
 
@@ -297,7 +301,7 @@ class WebSocketServer
 
                     Console.WriteLine($"TimeWatch (Read and push): {TimeWatch.GetSeconds()}");
             }
-           
+
 
         }
     }
@@ -333,8 +337,8 @@ class Program
         {
             File.WriteAllText("KeyPair/PublicKey.txt", QuickTest.m_publicKey);
         }
-        
-        QuickTest.m_publicKey  = File.ReadAllText("KeyPair/PublicKey.txt");
+
+        QuickTest.m_publicKey = File.ReadAllText("KeyPair/PublicKey.txt");
 
 
 
