@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.AccessControl;
@@ -8,23 +9,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using NBitcoin.Secp256k1;
-using Nethereum.Hex.HexConvertors.Extensions;
-using Nethereum.Signer;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Utilities;
-using Org.BouncyCastle.Utilities.Encoders;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-
-using SixLabors.ImageSharp.Processing;
-
 class WebSocketClient
 {
-    private const string m_serverUri = "ws://81.240.94.97:2501";
+    public static string m_serverUri = "ws://81.240.94.97:2501";
     public static string m_privateKey = "<RSAKeyValue><Modulus>vP7yDAkjkLrO7zqlaOlVpi3h7knD2xU4voEj3w9aJ9Pm/J0WADOOpnGcBc25VI7yuZuJZjsLuK9dz6aFVQR2+ZpT7H1aD/7qgXG10eIrOSu41ZIpcO26VDFcfsX1as7kmAQmLqFFTzcL2Yzv5Vz3982QeFy5Sx4MIRa26fbrKOE=</Modulus><Exponent>AQAB</Exponent><P>x5+b84t6DU7dmRnZbg6nK5eLyGseIyDVodarQ8f7C4kCTfgYG7WW89X1cU//jMsj3mjQntOjJF2BkhtX/HWO0w==</P><Q>8l77YEBBJiLo6yuFDZLWRyjYJsEvuE3/MQvSwXtY2Hb7BM+ynhIcncs6jGmUuSSNoXhQ877CeD2sOJbGV+Ng+w==</Q><DP>J98nZRO8wx+3fzb8iNEAbuKMFvHeSSHrybF478bny7wH687b8dzpU7aumX1jC5ofhfLliHO5KDBNCwPPJSvN5Q==</DP><DQ>OzKVxUmMYAswxpfHlKwjqBfCy5xt0l9CkDEqFdXRunU9FEzCfLdBxAyqTTdQevQBn8mqRA54ozO1B9FTuo2v1w==</DQ><InverseQ>K+5TNsF1zM4SeFX8Pd7OcsB3yYP0VkCCawyeQxjm3GQbQd805JnqCoaAnAiuM5N49jonQXuJMjYqgxT0JWh2VA==</InverseQ><D>oJ3J9pCNuSIJWyXsDQy/zUqRB4GJAVc3si7t3VOeutpLI8QcPm+Se8FxZz0+k64oebTFQCxN+daPUzmhdm8k6+OqoYV/gHCrWbEQMAKkavT3rxtlJbkWkFgqNxmMQA2/2feC0ESbavtZemBLOP7p+VVr/cYu6DzpUNr5+FVhD0E=</D></RSAKeyValue>";
     public static string m_publicKey = "<RSAKeyValue><Modulus>vP7yDAkjkLrO7zqlaOlVpi3h7knD2xU4voEj3w9aJ9Pm/J0WADOOpnGcBc25VI7yuZuJZjsLuK9dz6aFVQR2+ZpT7H1aD/7qgXG10eIrOSu41ZIpcO26VDFcfsX1as7kmAQmLqFFTzcL2Yzv5Vz3982QeFy5Sx4MIRa26fbrKOE=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
@@ -51,34 +38,7 @@ class WebSocketClient
 
     public async Task ConnectAndRun()
     {
-        //// Create a new instance of the RSA algorithm
-        //using (RSA rsag = RSA.Create())
-        //{
-        //    // Generate a 1024-bit RSA key pair
-        //    rsag.KeySize = 1024;
-
-        //    // Export the private key in PKCS#8 format
-        //    string privateKey = rsag.ToXmlString(true);
-        //    string publicKey = rsag.ToXmlString(false);
-
-        //    Console.WriteLine("Generated random key if you need");
-        //    // Print the generated keys
-        //    Console.WriteLine("Private Key:");
-        //    Console.WriteLine("-----------------------------------------------------------------");
-        //    Console.WriteLine(privateKey);
-        //    Console.WriteLine("-----------------------------------------------------------------");
-        //    Console.WriteLine();
-        //    Console.WriteLine("Public Key:");
-        //    Console.WriteLine("-----------------------------------------------------------------");
-        //    Console.WriteLine(publicKey);
-        //    Console.WriteLine("-----------------------------------------------------------------");
-        //    Console.WriteLine();
-        //    Console.WriteLine();
-        //    Console.WriteLine();
-        //}
-
         
-
 
 
         while (true)
@@ -146,7 +106,8 @@ class WebSocketClient
                         {
                             byte[] messageBytes = Encoding.UTF8.GetBytes(m_toSendToTheServerUTF8.Dequeue());
                             await webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, CancellationToken.None);
-                        } while (m_toSendToTheServerBytes.Count > 0)
+                        } 
+                        while (m_toSendToTheServerBytes.Count > 0)
                         {
                             byte[] messageBytes = m_toSendToTheServerBytes.Dequeue();
                             await webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, CancellationToken.None);
@@ -193,11 +154,14 @@ class WebSocketClient
 
                     if(receivedMessage.StartsWith("UDPT:"))
                     {
+                        Console.WriteLine($">>UDPT>>|"+receivedMessage);
                         string whatToSend = receivedMessage.Substring("UDPT:".Length);
                         int index= whatToSend.IndexOf(":");
                         if (index > -1) { 
                             string type = whatToSend.Substring(0, index);
                             string data = whatToSend.Substring(index + 1);
+                            Console.WriteLine($">>TYPE>>|" + type);
+                            Console.WriteLine($">>DATA>>|" + data);
                             if (int.TryParse(type, out int port))
                             {
                                 //Send UDP data as text to localhost:port
@@ -235,8 +199,11 @@ class WebSocketClient
 
 class Program
 {
+    public static string[] m_ports = new string[] { "5505", "5506" };
     static async Task Main(string[] args)
     {
+
+
 
         //Read a file name PrivateKey.txt and PublicKey.txt
         string path = Directory.GetCurrentDirectory();
@@ -259,8 +226,33 @@ class Program
        
         string privateKey = File.ReadAllText("KeyPair/RSA_PRIVATE_XML.txt");
         string publicKey = File.ReadAllText("KeyPair/RSA_PUBLIC_XML.txt");
+
+        string fileTarget = "TargetServer/URITARGET.txt";
+        if (!File.Exists(fileTarget))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(fileTarget));
+            File.WriteAllText(fileTarget, "ws://");
+        }
+        string fileTargetPorts = "Broadcasting/BROADCAST_PORT.txt";
+        if (!File.Exists(fileTargetPorts))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(fileTargetPorts));
+            File.WriteAllText(fileTargetPorts, "5505\n5506");
+        }
+
+        m_ports= File.ReadAllLines(fileTargetPorts).Where(k=>!string.IsNullOrEmpty(k) && int.TryParse(k, out _)).ToArray();
+        foreach (var item in m_ports)
+        {
+            if(int.TryParse(item, out int port))
+            {
+                Console.WriteLine($"Broadcasting to port:{port}");
+                WebSocketClient.m_broadcastPort.Add(port);
+            }
+        }
+        string serverUri = File.ReadAllText(fileTarget);
         WebSocketClient.m_publicKey = publicKey;
         WebSocketClient.m_privateKey = privateKey;
+        WebSocketClient.m_serverUri = serverUri;
 
         Console.WriteLine("PUBLIC KEY USE:");
         Console.WriteLine("---------------------");
@@ -268,8 +260,6 @@ class Program
         Console.WriteLine("---------------------");
 
         //example of sending data to local ports when broadcast all.
-        WebSocketClient.m_broadcastPort.Add(5505);
-        WebSocketClient.m_broadcastPort.Add(5506);
 
         Task.Run(async () =>
         {
@@ -306,14 +296,7 @@ public class PemToXmlConverter
             publicPem = rsa.ExportRSAPublicKeyPem();
         }
     }
-    public void GenerateEthereumKey(out string privateKeyEthereum, out string publicKeyEthereum, out string address)
-    {
-
-        var ecKey = EthECKey.GenerateKey();
-        privateKeyEthereum = ecKey.GetPrivateKeyAsBytes().ToHex();
-        publicKeyEthereum = ecKey.GetPubKey().ToHex();
-        address = ecKey.GetPublicAddress();
-    }
+    
 
 
     public static string ConvertPrivateKey(string pemPrivateKey)
